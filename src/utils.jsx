@@ -8,7 +8,7 @@ export function Button(props) {
   const buttonType = props.type;
 
   return (
-    <button className={buttonClassName} type={buttonType} />
+    <button className={buttonClassName} type={buttonType} onClick={props.click}/>
   )
 }
 
@@ -39,4 +39,8 @@ export function taskInformation(task, priority) {
     priority: priority,
     status: 'active'
   };
+}
+
+export function getTaskID(target){
+  return target.parentNode.id;
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import './css/style.css'
 import {
@@ -6,101 +6,128 @@ import {
   taskUIBlockClass,
   checkboxButtonClass,
   isNotValidInput,
-  taskInformation
+  taskInformation,
+  getTaskID
 } from './utils'
-import {
-} from './const'
-
 
 function ToDoApp() {
-  const [taskListHigh, setTaskListHigh] = useState([]);
-  const [taskListLow, setTaskListLow] = useState([]);
-  const [inputHighPriorityValue, setInputHighPriorityValue] = useState('');
-  const [inputLowPriorityValue, setInputLowPriorityValue] = useState('');
+  const [taskList, setTaskList] = useState([]);
+  const [inputHighValue, setInputHighValue] = useState('');
+  const [inputLowValue, setInputLowValue] = useState('');
 
-  function handleChange(event) {
-    const currentInputPriority = event.target.id;
-    if (currentInputPriority === 'high') {
-      setInputHighPriorityValue(event.target.value);
-    } else {
-      setInputLowPriorityValue(event.target.value);
-    }
+  function handleHighSubmit(e) {
+    setInputHighValue(e.target.value);
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
+  function handleLowSubmit(e) {
+    setInputLowValue(e.target.value);
+  }
 
-    const currentFormPriorityIsHigh = event.target.id === 'high';
+  function handleSubmit(e) {
+    e.preventDefault();
 
-    const inputIsNotValid = currentFormPriorityIsHigh ? isNotValidInput(inputHighPriorityValue) : isNotValidInput(inputLowPriorityValue);
+    const formPriority = e.target.id;
+    const formPriorityIsHigh = formPriority === 'high';
+
+    const inputIsNotValid = formPriorityIsHigh ? isNotValidInput(inputHighValue) : isNotValidInput(inputLowValue);
 
     if (inputIsNotValid) {
       return
     }
 
-    if (currentFormPriorityIsHigh) {
-      setTaskListHigh(taskListHigh.push(taskInformation(inputHighPriorityValue, 'high')));
-      setInputHighPriorityValue('');
+    if (formPriorityIsHigh) {
+      const newTaskList = [...taskList, taskInformation(inputHighValue, formPriority)];
+      setTaskList(newTaskList);
+      setInputHighValue('');
     } else {
-      setTaskListLow(taskListLow.push(taskInformation(inputLowPriorityValue, 'low')));
-      setInputLowPriorityValue('');
+      const newTaskList = [...taskList, taskInformation(inputLowValue, formPriority)];
+      setTaskList(newTaskList);
+      setInputLowValue('');
     }
+  }
+
+  function changeTaskStatus(e) {
+    const taskID = getTaskID(e.target);
+    const currentTaskList = [...taskList];
+
+    const taskIDinList = currentTaskList.findIndex(element => { if (element.id === +taskID) return true });
+    const currentTaskStatus = currentTaskList[taskIDinList].status;
+
+    const statusIsDone = currentTaskStatus === 'done';
+    if (statusIsDone) {
+      currentTaskList[taskIDinList].status = 'active';
+    } else {
+      currentTaskList[taskIDinList].status = 'done';
+    }
+
+    setTaskList(currentTaskList);
+  }
+
+  function deleteTask(e) {
+    const taskID = getTaskID(e.target);
+    const currentTaskList = [...taskList];
+
+    const taskIDinList = currentTaskList.findIndex(element => { if (element.id === +taskID) return true });
+
+    currentTaskList.splice(taskIDinList, 1);
+
+    setTaskList(currentTaskList);
   }
 
   return (
     <div className="main_block">
-      <ToDoBlock bodyName='HIGH PRIORITY' placeholder='Добавить важных дел' submit={handleSubmit} input={handleChange} inputValue={inputHighPriorityValue} prioprity='high' taskList={taskListHigh} />
-      <ToDoBlock bodyName='LOW PRIORITY' placeholder='Добавить' submit={handleSubmit} input={handleChange} inputValue={inputLowPriorityValue} prioprity='low' taskList={taskListLow}/>
+      <ToDoBlock bodyName='HIGH PRIORITY' placeholder='Добавить важных дел' id='high' change={handleHighSubmit} value={inputHighValue} submit={handleSubmit} taskList={taskList} taskStatus={changeTaskStatus} taskDelete={deleteTask}/>
+      <ToDoBlock bodyName='LOW PRIORITY' placeholder='Добавить' id='low' change={handleLowSubmit} value={inputLowValue} submit={handleSubmit} taskList={taskList} taskStatus={changeTaskStatus} taskDelete={deleteTask}/>
     </div>)
 }
 
 function ToDoBlock(props) {
   const blockName = props.bodyName;
   const placeholder = props.placeholder;
-  const submitHandle = props.submit;
-  const inputHandle = props.input;
-  const inputValue = props.value;
-  const priotity = props.prioprity
+  const id = props.id;
+  const value = props.value;
   const taskList = props.taskList;
-
-  const taskListOnUI = taskList.map(element=><ToDoTask key={element.id} task={element.task} status={element.status} />);  
+  const taskOnUI = [];
+  taskList.forEach(element => {
+    if (element.priority === id) {
+      taskOnUI.push(<ToDoTask task={element.task} status={element.status} id={element.id} statusChange={props.taskStatus} deleteTask={props.taskDelete}/>)
+    }
+  })
 
   return (
     <div>
       <div className='listHeader'>{blockName}</div>
       <div className="coordinate">
-        <ToDoHeader placeholder={placeholder} submit={submitHandle} input={inputHandle} value={inputValue} priorityMarker={priotity} />
+        <ToDoHeader placeholder={placeholder} change={props.change} id={id} value={value} submit={props.submit} />
       </div>
-      {taskListOnUI}
+      {taskOnUI}
     </div>
   )
 }
 
 function ToDoHeader(props) {
   const placeholder = props.placeholder;
-  const submit = props.submit;
-  const inputChange = props.input;
-  const inputValue = props.value;
-  const priority = props.priorityMarker;
+  const id = props.id;
+  const value = props.value;
 
   return (
-    <form onSubmit={submit} id={priority}>
-      <input className="addTask" placeholder={placeholder} type="text" onChange={inputChange} value={inputValue} id={priority} />
+    <form onSubmit={props.submit} id={id}>
+      <input className="addTask" placeholder={placeholder} type="text" onChange={props.change} value={value} />
       <Button class='add' type='submit' />
     </form>
   )
 }
 
 function ToDoTask(props) {
-  const key = props.key;
   const task = props.task;
   const status = props.status;
+  const id = props.id;
 
   return (
-    <div className={taskUIBlockClass(status)} key={key}>
-      <Button class={checkboxButtonClass(status)} />
+    <div className={taskUIBlockClass(status)} id={id} >
+      <Button class={checkboxButtonClass(status)} click={props.statusChange} />
       <p>{task}</p>
-      <Button class='delete'/>
+      <Button class='delete' click={props.deleteTask}/>
     </div>
   )
 }
